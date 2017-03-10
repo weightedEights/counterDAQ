@@ -16,8 +16,8 @@ from subprocess import call
 def main():
     printHeader()
 
-    logFilePath = os.getcwd()
-    instrumentIP = "TCPIP0::172.20.0.125::inst0::INSTR"
+    scriptDir = os.getcwd()
+    instrumentIP = "TCPIP0::192.168.23.5::inst0::INSTR"
     stateFile = "INT:\\RAT.EXTRIG.5sec.sta"
 
     inst = instConnect(instrumentIP)
@@ -28,7 +28,7 @@ def main():
 
     instDataStart(inst)    # start measurement and store data in instrument buffer
 
-    logFile = logFileSetup(logFilePath)
+    logFile = logFileSetup(scriptDir)
 
     try:
         dataLogging(logFile, inst)   # automatically start logging data and writing to file, abort on user input
