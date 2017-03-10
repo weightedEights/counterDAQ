@@ -10,7 +10,6 @@ import visa
 import time
 import os
 from datetime import datetime
-from subprocess import call
 
 
 def main():
