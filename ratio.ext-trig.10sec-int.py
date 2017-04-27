@@ -1,13 +1,15 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/bin/bash
 
 # For now, this script will load a pre-generated state file (*.sta) which is stored locally on the counter
 # In the future, this script will include UI elements to allow changes to measurement states
 
 import visa
 import time
+import logging
+from logging.handlers import TimedRotatingFileHandler as TRFH
 import os
 from datetime import datetime
+from subprocess import call
 
 
 def main():
@@ -15,7 +17,7 @@ def main():
 
     scriptDir = os.getcwd()
     instrumentIP = "TCPIP0::192.168.23.5::inst0::INSTR"
-    stateFile = "INT:\\RAT.EXTRIG.5sec.sta"
+    stateFile = "INT:\\RAT.EXTRIG.10sec.sta"
 
     inst = instConnect(instrumentIP)
     instID = inst.query('*IDN?')
@@ -25,12 +27,11 @@ def main():
 
     instDataStart(inst)    # start measurement and store data in instrument buffer
 
-    logFile = logFileSetup(scriptDir)
+    logFile = logFileSetup(scriptDir) # create log file with header
 
-    try:
-        dataLogging(logFile, inst)   # automatically start logging data and writing to file, abort on user input
-    except KeyboardInterrupt:
-        pass
+    logger = timeRotatingLogSetup(logFile) # create a logger instance
+
+    dataLogging(logger, inst)   # automatically start logging data and writing to file, abort on user input
 
     instDisconnect(inst)    # abort measurement routine and disconnect from the instrument
 
@@ -38,7 +39,7 @@ def main():
 def printHeader():
     print("---------------------------------")
     print("   Keysight 53220A Data Logger")
-    print("   " + str(datetime.now()))
+    print("   " + str(datetime.utcnow()))
     print("---------------------------------")
 
 
@@ -69,11 +70,13 @@ def logFileSetup(path):
 
     timeStamp = time.strftime("%Y%m%d")
     ind = 1
-    logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
+    # logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
+    logFile = os.path.join(logFilePath, "counterLog.{:03d}.csv".format(ind))
 
     while os.path.exists(logFile):
         ind += 1
-        logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
+    #     logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
+        logFile = os.path.join(logFilePath, "counterLog.{:03d}.csv".format(ind))
 
     with open(logFile, "w") as log:
         log.write("Time, CounterData\n")
@@ -81,8 +84,20 @@ def logFileSetup(path):
     return logFile
 
 
-def dataLogging(logFile, inst):
-    print("Log file path: " + os.path.abspath(logFile))
+def timeRotatingLogSetup(logFile):
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
+    # when: s=sec, m=min, h=hour, d=day, W0-W7=weekday (0=monday), midnight=midnight
+    handler = TRFH(logFile, when='midnight', interval=1, backupCount=0, encoding='utf8', utc=True)
+    logger.addHandler(handler)
+
+    return logger
+
+
+def dataLogging(logger, inst):
+    # print("Log file path: " + os.path.abspath(logFile))
     print("Logging initiated..")
 
     inst.write(':FORMat:DATA %s' % ('ASC'))
@@ -94,8 +109,9 @@ def dataLogging(logFile, inst):
 
         if meas != "":
             print(meas)
-            with open(logFile, 'a') as log:
-                log.write(str(datetime.now()) + "," + meas + "\n")
+            # with open(logFile, 'a') as log:
+            #     log.write(str(datetime.utcnow()) + "," + meas + "\n")
+            logger.info(str(datetime.utcnow()) + ',' + meas)
 
 
 def instDisconnect(inst):
