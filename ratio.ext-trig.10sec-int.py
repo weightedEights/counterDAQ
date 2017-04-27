@@ -9,7 +9,6 @@ import logging
 from logging.handlers import TimedRotatingFileHandler as TRFH
 import os
 from datetime import datetime
-from subprocess import call
 
 
 def main():
