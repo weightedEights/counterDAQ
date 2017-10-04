@@ -3,6 +3,7 @@
 # For now, this script will load a pre-generated state file (*.sta) which is stored locally on the counter
 # In the future, this script will include UI elements to allow changes to measurement states
 
+import sys
 import visa
 import time
 import logging
@@ -43,10 +44,15 @@ def print_header():
 
 
 def inst_connect(inst_IP):
-    rm = visa.ResourceManager()
-    inst = rm.open_resource(inst_IP)
+    try:
+        rm = visa.ResourceManager()
+        inst = rm.open_resource(inst_IP)
+        return inst
 
-    return inst
+    except:
+        raise Exception("ERROR: Cannot connect to instrument IP: {}".format(inst_IP[8:-14]))
+        # print(e.message)
+        sys.exit(0)
 
 
 def inst_load_state(inst, sta):
@@ -67,7 +73,7 @@ def log_file_setup(path):
     if not os.path.exists(log_file_path):
         os.mkdir(log_file_path)
 
-    time_stamp = time.strftime("%Y%m%d")
+    # time_stamp = time.strftime("%Y%m%d")
     ind = 1
     # log_file = os.path.join(log_file_path, "counterLog.{}.{:03d}.csv".format(time_stamp, ind))
     log_file = os.path.join(log_file_path, "counterLog.{:03d}.csv".format(ind))
