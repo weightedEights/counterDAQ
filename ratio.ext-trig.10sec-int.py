@@ -12,44 +12,44 @@ from datetime import datetime
 
 
 def main():
-    printHeader()
+    print_header()
 
-    scriptDir = os.getcwd()
-    instrumentIP = "TCPIP0::192.168.23.5::inst0::INSTR"
-    stateFile = "INT:\\RAT.EXTRIG.10sec.sta"
+    script_dir = os.getcwd()
+    instrument_IP = "TCPIP0::192.168.23.5::inst0::INSTR"
+    state_file = "INT:\\RAT.EXTRIG.10sec.sta"
 
-    inst = instConnect(instrumentIP)
-    instID = inst.query('*IDN?')
-    print(instID)
+    inst = inst_connect(instrument_IP)
+    inst_id = inst.query('*IDN?')
+    print(inst_id)
 
-    instLoadState(inst, stateFile)  # read local-to-inst state file and prepare instrument to take measurement
+    inst_load_state(inst, state_file)  # read local-to-inst state file and prepare instrument to take measurement
 
-    instDataStart(inst)    # start measurement and store data in instrument buffer
+    inst_data_start(inst)    # start measurement and store data in instrument buffer
 
-    logFile = logFileSetup(scriptDir) # create log file with header
+    log_file = log_file_setup(script_dir) # create log file with header
 
-    logger = timeRotatingLogSetup(logFile) # create a logger instance
+    logger = time_rotating_log_setup(log_file) # create a logger instance
 
-    dataLogging(logger, inst)   # automatically start logging data and writing to file, abort on user input
+    data_logging(logger, inst)   # automatically start logging data and writing to file, abort on user input
 
-    instDisconnect(inst)    # abort measurement routine and disconnect from the instrument
+    inst_disconnect(inst)    # abort measurement routine and disconnect from the instrument
 
 
-def printHeader():
+def print_header():
     print("---------------------------------")
     print("   Keysight 53220A Data Logger")
     print("   " + str(datetime.utcnow()))
     print("---------------------------------")
 
 
-def instConnect(instIP):
+def inst_connect(inst_IP):
     rm = visa.ResourceManager()
-    inst = rm.open_resource(instIP)
+    inst = rm.open_resource(inst_IP)
 
     return inst
 
 
-def instLoadState(inst, sta):
+def inst_load_state(inst, sta):
     inst.write('*CLS')
     time.sleep(1)
     inst.write('*RST')
@@ -57,63 +57,63 @@ def instLoadState(inst, sta):
     inst.write(':MMEMory:LOAD:STATe "%s"' % sta)
 
 
-def instDataStart(inst):
+def inst_data_start(inst):
     inst.write(':INITiate:IMMediate')
 
 
-def logFileSetup(path):
+def log_file_setup(path):
 
-    logFilePath = os.path.join(path, "logs")
-    if not os.path.exists(logFilePath):
-        os.mkdir(logFilePath)
+    log_file_path = os.path.join(path, "logs")
+    if not os.path.exists(log_file_path):
+        os.mkdir(log_file_path)
 
-    timeStamp = time.strftime("%Y%m%d")
+    time_stamp = time.strftime("%Y%m%d")
     ind = 1
-    # logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
-    logFile = os.path.join(logFilePath, "counterLog.{:03d}.csv".format(ind))
+    # log_file = os.path.join(log_file_path, "counterLog.{}.{:03d}.csv".format(time_stamp, ind))
+    log_file = os.path.join(log_file_path, "counterLog.{:03d}.csv".format(ind))
 
-    while os.path.exists(logFile):
+    while os.path.exists(log_file):
         ind += 1
-    #     logFile = os.path.join(logFilePath, "counterLog.{}.{:03d}.csv".format(timeStamp, ind))
-        logFile = os.path.join(logFilePath, "counterLog.{:03d}.csv".format(ind))
+    #     log_file = os.path.join(log_file_path, "counterLog.{}.{:03d}.csv".format(time_stamp, ind))
+        log_file = os.path.join(log_file_path, "counterLog.{:03d}.csv".format(ind))
 
-    with open(logFile, "w") as log:
+    with open(log_file, "w") as log:
         log.write("Time, CounterData\n")
 
-    return logFile
+    return log_file
 
 
-def timeRotatingLogSetup(logFile):
+def time_rotating_log_setup(log_file):
     
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     # when: s=sec, m=min, h=hour, d=day, W0-W7=weekday (0=monday), midnight=midnight
-    handler = TRFH(logFile, when='midnight', interval=1, backupCount=0, encoding='utf8', utc=True)
+    handler = TRFH(log_file, when='midnight', interval=1, backupCount=0, encoding='utf8', utc=True)
     logger.addHandler(handler)
 
     return logger
 
 
-def dataLogging(logger, inst):
-    # print("Log file path: " + os.path.abspath(logFile))
+def data_logging(logger, inst):
+    # print("Log file path: " + os.path.abspath(log_file))
     print("Logging initiated..")
 
     inst.write(':FORMat:DATA %s' % ('ASC'))
 
     while True:
         time.sleep(1)
-        measurementBlock = inst.query_binary_values(':R? %d' % (1), 's', False)
-        meas = str(measurementBlock)[3:-2]
+        measurement_block = inst.query_binary_values(':R? %d' % (1), 's', False)
+        meas = str(measurement_block)[3:-2]
 
         if meas != "":
             print(meas)
-            # with open(logFile, 'a') as log:
+            # with open(log_file, 'a') as log:
             #     log.write(str(datetime.utcnow()) + "," + meas + "\n")
             logger.info(str(datetime.utcnow()) + ',' + meas)
 
 
-def instDisconnect(inst):
+def inst_disconnect(inst):
     inst.close()
     visa.ResourceManager().close()
 
